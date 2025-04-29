@@ -14,7 +14,6 @@ Blockchain-gestützte Produktions- & Audit-Plattform für Implantate
 7. [Tests & CI](#tests--ci)
 8. [Eigene Schlüssel / IDs](#eigene-schlüssel--ids)
 9. [Troubleshooting](#troubleshooting)
-10. [Lizenz](#lizenz)
 
 ---
 
