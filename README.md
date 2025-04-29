@@ -106,7 +106,7 @@ MaterialIn → DeepDraw → ThreadCut → SandBlast → LaserMark → VisualQC �
 
 ## Schnellstart
 ```bash
-git clone https://github.com/<dein-org>/cardano-implant.git
+git clone https://github.com/https://github.com/MikeDiethelm/BA-2025.git
 cd cardano-implant
 code .                # „Reopen in Container?“ → Yes
 
