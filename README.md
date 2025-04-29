@@ -1,25 +1,138 @@
 # Cardano-Implant 🦾  
 Blockchain-gestützte Produktions- & Audit-Plattform für Implantate  
-*(Cardano Mainnet + Hydra-L2, voll integrierbar in SAP/MES)*
-
-![System-Architektur](./A_flowchart_diagram_in_the_digital_medium_illustra.png)
+(Cardano Mainnet + Hydra-L2, komplett integrierbar in SAP / MES)
 
 ---
 
 ## Inhaltsverzeichnis
-1. [Überblick & Architektur](#überblick--architektur)  
-2. [Voraussetzungen (macOS)](#voraussetzungen-macos)  
-3. [Schnellstart – 5-Minuten-Demo](#schnellstart--5-minuten--demo)  
-4. [Projektstruktur](#projektstruktur)  
-5. [Build & Run-Workflows](#build--run-workflows)  
-6. [Tests & CI](#tests--ci)  
-7. [Eigene Schlüssel / IDs](#eigene-schlüssel--ids)  
-8. [Troubleshooting](#troubleshooting)  
-9. [Lizenz](#lizenz)
+1. [Projektüberblick](#projektüberblick)
+2. [Architekturdiagramm](#architekturdiagramm)
+3. [Voraussetzungen (macOS)](#voraussetzungen-macos)
+4. [Schnellstart](#schnellstart)
+5. [Projektstruktur](#projektstruktur)
+6. [Build- & Run-Workflows](#build--run-workflows)
+7. [Tests & CI](#tests--ci)
+8. [Eigene Schlüssel / IDs](#eigene-schlüssel--ids)
+9. [Troubleshooting](#troubleshooting)
+10. [Lizenz](#lizenz)
 
 ---
 
-## Überblick & Architektur
-Die Plattform schreibt jeden Fertigungs- und QC-Schritt **unveränderlich** auf Cardano.  
-Hohe TPS liefert ein **Hydra-Head** im Werk; L1-Anchors sichern globale Audit-Finalität.
+## Projektüberblick
+
+**Cardano-Implant** bildet alle Fertigungs-, Prüf- und Genehmigungsprozesse für Implantate transparent und unveränderlich auf der Blockchain ab.  
+Dabei werden:
+
+- Prozessschritte **lokal** mit **Hydra L2** schnell und günstig verarbeitet
+- Ein finaler Audit-Hash auf **Cardano Mainnet** verankert
+- Vertrauliche Patientendaten **Off-Chain** gespeichert (AES-verschlüsselt)
+
+---
+
+## Architekturdiagramm
+
+```mermaid
+flowchart LR
+  A[SAP / MES Systeme] -->|RFC Call| B(Edge Gateway<br/>(TypeScript API))
+  B -->|Builds Hydra Tx| C(Hydra Head<br/>(Layer-2 Cluster))
+  C -->|Final Commit| D(Cardano Mainnet)
+  B --> E[Off-Chain DB<br/>(PostgreSQL + MinIO)]
+  E -->|SHA-256 Hash| B
+```
+
+---
+
+## Voraussetzungen (macOS)
+
+| Tool                   | Version ≥ | Installieren über                        |
+|-------------------------|-----------|-----------------------------------------|
+| Git                     | 2.40      | `brew install git`                      |
+| Docker Desktop          | 25.x      | [Docker Desktop](https://www.docker.com/products/docker-desktop) |
+| Visual Studio Code      | 1.88      | [VS Code](https://code.visualstudio.com/) |
+| VS-Code Extensions      | -         | Dev Containers, Haskell, Prettier       |
+
+> Hinweis: Cardano CLI, Hydra Node, GHC, pnpm etc. sind bereits im Dev-Container enthalten.
+
+---
+
+## Schnellstart
+
+```bash
+git clone https://github.com/<dein-org>/cardano-implant.git
+cd cardano-implant
+code .                      # "Reopen in Container?" → Ja
+
+# Terminal 1 (im Container)
+task Hydra Head              # startet Hydra-Node
+
+# Terminal 2 (im Container)
+pnpm -C offchain/edge-gw dev  # startet Edge-Gateway (Hot Reload)
+
+# Beispiel-Step senden:
+curl -X POST http://localhost:8080/v1/step \
+     -H 'Content-Type: application/json' \
+     -d @sap/example_step.json
+```
+
+Nach erfolgreichem Submit siehst du eine Hydra-TX-ID im Log.
+
+---
+
+## Projektstruktur
+
+```plaintext
+.devcontainer/    # Dockerfile + Dev-Container-Config
+.vscode/          # Build-Tasks, Debug-Launcher
+plutus/           # On-Chain-Code (Haskell) + Tests
+hydra/            # Hydra-Head Konfiguration
+offchain/edge-gw/ # TypeScript Gateway (API)
+db/               # Patientendaten (verschlüsselt)
+sap/              # SAP RFC-Stub
+cicd/             # CI/CD-Pipeline (GitLab)
+docs/architecture.png # Architektur-Diagramm
+```
+
+---
+
+## Build- & Run-Workflows
+
+| Aktion                  | Befehl / Shortcut        | Ergebnis                        |
+|--------------------------|---------------------------|---------------------------------|
+| Plutus + TS Build        | `⇧⌘B` / `Ctrl⇧B`           | kompiliert Haskell + Gateway    |
+| Hydra Node starten       | Task `Hydra Head`          | Hydra-Head auf Port :4001       |
+| Edge-Gateway debuggen    | Menü → Run ▶ Debug Edge-GW | Breakpoints & Live-Reload aktiv |
+| Plutus Tests ausführen   | `cabal test all`           | Unit-Tests auf Prozesslogik     |
+| Smart Contract exportieren| `plutus-compile …`        | erzeugt `implant.plutus`        |
+
+---
+
+## Tests & CI
+
+- Unit-Tests: `plutus/test/ValidatorSpec.hs`
+- CI/CD (`cicd/.gitlab-ci.yml`):
+  - Build Dev-Container
+  - Haskell Unit-Tests
+  - Build-Artefakt `implant.plutus`
+
+---
+
+## Eigene Schlüssel / IDs
+
+| Platzhalter           | Datei                          | Beschreibung |
+|------------------------|--------------------------------|--------------|
+| Hydra Script-IDs       | `hydra/configs/hydra-mainnet.yaml` | aktuelle Hydra Deployments |
+| Wallet-Adressen / UTxO | JSON-Payload ans Gateway        | echte Cardano Wallets |
+| Operator-Keys (.vkey/.skey) | `hydra/keys/`                | via `cardano-cli address key-gen` |
+| AES Schlüssel (PATIENT_KEY) | Umgebungsvariable für DB    | schützt Patienten-Off-Chain-Daten |
+
+---
+
+## Troubleshooting
+
+| Problem                             | Lösung |
+|-------------------------------------|--------|
+| Container-Build dauert lange        | Erstes Build cached alles – danach schnell |
+| `cardano-cli` nicht gefunden         | Sicherstellen, dass Terminal im Container läuft |
+| Hydra Head hängt bei "waiting"      | Alle Party-Keys und Head-Init korrekt setzen |
+| M1/M2 Fehler "exec format"           | In Dockerfile `--platform=linux/amd64` setzen |
 
