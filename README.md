@@ -106,8 +106,8 @@ MaterialIn → DeepDraw → ThreadCut → SandBlast → LaserMark → VisualQC �
 
 ## Schnellstart
 ```bash
-git clone https://github.com/https://github.com/MikeDiethelm/BA-2025.git
-cd cardano-implant
+git clone https://github.com/MikeDiethelm/BA-2025.git
+cd MikeDiethelm
 code .                # „Reopen in Container?“ → Yes
 
 # Terminal 1
