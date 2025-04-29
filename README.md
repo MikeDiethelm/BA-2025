@@ -33,18 +33,17 @@ Dabei werden:
 
 ```mermaid
 flowchart TD
-    A(SAP / MES) -->|RFC Call| B(Edge-Gateway<br/>(TypeScript API))
-    B -->|Build Transaction + SHA256| C(Hydra-Head<br/>(hydra-node))
-    C -->|Commit to Mainnet| D(Cardano Mainnet)
+    A[SAP / MES] -->|RFC Call| B[Edge-Gateway (TypeScript API)]
+    B -->|Build Transaction + SHA-256| C[Hydra-Head (hydra-node)]
+    C -->|Commit| D[Cardano Mainnet]
 
-    B --> E(Database Off-Chain Storage<br/>(AES-Encrypted JSON))
+    B --> E[Off-Chain Storage (AES-Encrypted JSON)]
 
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style B fill:#bbf,stroke:#333,stroke-width:2px
     style C fill:#bfb,stroke:#333,stroke-width:2px
     style D fill:#fbf,stroke:#333,stroke-width:2px
     style E fill:#ffc,stroke:#333,stroke-width:2px
-```
 
 ---
 
