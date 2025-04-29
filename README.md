@@ -32,12 +32,18 @@ Dabei werden:
 ## Architekturdiagramm
 
 ```mermaid
-flowchart LR
-  A[SAP / MES Systeme] -->|RFC Call| B(Edge Gateway<br/>(TypeScript API))
-  B -->|Builds Hydra Tx| C(Hydra Head<br/>(Layer-2 Cluster))
-  C -->|Final Commit| D(Cardano Mainnet)
-  B --> E[Off-Chain DB<br/>(PostgreSQL + MinIO)]
-  E -->|SHA-256 Hash| B
+flowchart TD
+    A(SAP / MES) -->|RFC Call| B(Edge-Gateway<br/>(TypeScript API))
+    B -->|Build Transaction + SHA256| C(Hydra-Head<br/>(hydra-node))
+    C -->|Commit to Mainnet| D(Cardano Mainnet)
+
+    B --> E(Database Off-Chain Storage<br/>(AES-Encrypted JSON))
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#bfb,stroke:#333,stroke-width:2px
+    style D fill:#fbf,stroke:#333,stroke-width:2px
+    style E fill:#ffc,stroke:#333,stroke-width:2px
 ```
 
 ---
