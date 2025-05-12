@@ -1,6 +1,6 @@
 # Cardano-Implant 🦾  
 Blockchain-gestützte Produktions- & Audit-Plattform für Implantate  
-(Cardano Mainnet + Hydra-L2, komplett integrierbar in SAP / MES)
+(Cardano Native Token + State-Thread-Token-Pattern, integrierbar in SAP / MES)
 
 ---
 
@@ -19,21 +19,24 @@ Blockchain-gestützte Produktions- & Audit-Plattform für Implantate
 ---
 
 ## Projektüberblick
-**Cardano-Implant** bildet alle Fertigungs-, Prüf- und Genehmigungs­schritte für Implantate transparent und unveränderlich auf der Blockchain ab.
+**Cardano-Implant** modelliert jedes hergestellte Implantat als **Cardano Native Token (CNT)** – abgesichert durch ein **Aiken-Policy-Script** im State-Thread-Token-Pattern (STT).  
+So entsteht ein manipulationssicherer, lebens­zyklus­fähiger Digital-Twin:
 
-* Prozess­schritte **lokal** mit **Hydra L2** schnell & kostengünstig  
-* Finaler Audit-Hash auf **Cardano Mainnet**  
-* Vertrauliche Daten **Off-Chain** (AES-verschlüsselt)
+* **Mint**: Token entsteht beim ersten Fertigungs­schritt.  
+* **Update**: Datum der STT-Adresse wird in jeder Supply-Chain-Stufe erweitert.  
+* **Burn / Transfer**: Abschluss oder Ownership-Wechsel (z. B. an Klinik).
+
+Alle Off-Chain-Transaktionen werden über **MeshJS** (TypeScript) bzw. **PyCardano** gebaut und via **Blockfrost** auf dem **Cardano Preview-Testnetz** eingereicht.
 
 ---
 
 ## Architekturdiagramm
 ```mermaid
 flowchart TD
-    A[SAP / MES Systeme] -->|RFC Call| B[Edge Gateway TypeScript API]
-    B -->|Build Transaction + SHA-256| C[Hydra Head Layer-2]
-    C -->|Commit Transaction| D[Cardano Mainnet]
-    B --> E[Off-Chain Storage AES-Encrypted JSON]
+    A[SAP / MES] -->|RFC JSON| B[Off-Chain Service<br/>(MeshJS / PyCardano)]
+    B -->|REST| C[Blockfrost API]
+    C -->|Tx Submit| D[Cardano Preview Testnet]
+    D -->|State Thread Token| E[Implant-NFT + Datum]
 
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style B fill:#bbf,stroke:#333,stroke-width:2px
@@ -46,48 +49,55 @@ flowchart TD
 
 ## Technische Umsetzung
 
-### Idee in einem Satz  
-> Jeder Produktions- und QC-Schritt wird sofort als signierte Transaktion in einem lokalen Hydra-Head festgeschrieben; alle paar Minuten sichert ein Merkle-Root auf Cardano Mainnet die globale Unveränderlichkeit.
+### 1 · On-Chain (Smart Policies)
+| Ziel | Tool | Datei |
+|------|------|-------|
+| Implant-NFT + STT-Policy | **Aiken** | `onchain/policies/implant_stt.ak` |
 
-### Layer-Überblick  
+* NFT-Policy **prägt genau 1 Token** (`ImplantId`)  
+* STT-Policy sichert, dass nur autorisierte Operator-Signaturen das Datum updaten.
 
-| Schicht | Aufgabe | Technologie |
-|---------|---------|-------------|
-| **SAP / MES** | Bediener erfasst Schritt, sendet RFC | SAP RFC |
-| **Edge-Gateway** | wandelt IDoc → JSON, berechnet SHA-256, baut Tx | TypeScript + cardano-cli |
-| **Hydra-Head** | > 10 000 Tx/s, gebührenfrei | hydra-node 0.20 |
-| **Plutus-Validator** | erzwingt Schrittfolge + Operator-Signatur | Haskell / Plutus V3 |
-| **Cardano Mainnet** | speichert Batch-Root | CSL (Ouroboros PoS) |
-| **Off-Chain-DB** | verschlüsselte Detail-Daten & Bilder | Postgres, MinIO |
-| **CI/CD** | reproducible Builds & Tests | Dev-Container, GitLab CI |
-
-### Ablauf eines Schritts (Beispiel *LaserMark*)  
-
-1. **Operator** bestätigt Schritt in SAP → RFC JSON → Edge-Gateway.  
-2. Gateway speichert JSON verschlüsselt, erzeugt `metaHash`, bildet Plutus-Datum (`ImplantId`,`Step`,`OperatorPKH`,`metaHash`).  
-3. Transaction an **Hydra-Head** → lokale Finalität < 1 s.  
-4. **Head** bündelt Batch-Hashes; alle 5 min Commit-Tx zum Mainnet.  
-5. Auditor prüft später Hash = unveränderter Original-Datensatz.
-
-### Smart-Contract-Logik  
-
-```
-MaterialIn → DeepDraw → ThreadCut → SandBlast → LaserMark → VisualQC → FinalQC
+Beispiel-Aiken-Snippet:
+```rust
+fn operator_authorised(ctx: ScriptContext) -> Bool {
+  tx_signed_by(ctx, ctx.get_datum<TxDatum>().operator_pkh)
+}
 ```
 
-* Nur definierte Übergänge erlaubt (`allowedNext`).  
-* Jedes State-Update muss vom **PubKeyHash des Operators** signiert sein.  
+Kompilieren:
+```bash
+aiken build
+aiken blueprint > onchain/blueprint.json   # erzeugt plutus.json
+```
 
-### Datenschutz / DSGVO  
+### 2 · Off-Chain (Tx-Builder)  
+* **MeshJS** (TS) oder **PyCardano** für Mint-, Update-, Burn-Tx-Erstellung  
+* Network-Layer: **Blockfrost** API (Preview-Testnetz)
 
-* Personen- oder Rezept­daten **nur Off-Chain**, verschlüsselt.  
-* On-Chain liegt ausschließlich der Hash – kein Personen­bezug.  
+Workflow (MeshJS):
+```ts
+import { TxBuilder, Data, BlockfrostProvider } from "@meshsdk/core";
+const provider = new BlockfrostProvider("<BLOCKFROST_KEY>", "preview");
+const tx = new TxBuilder()
+   .mintAsset(policyId, assetName, 1n)
+   .attachScript("onchain/blueprint.json")
+   .payToContract(sttAddr, Data.to(sttDatum), "1500000")
+   .complete();
+await provider.submitTx(tx);
+```
 
-### Betrieb & Skalierung  
+### 3 · Supply-Chain-Update (STT-Pattern)
+1. Off-Chain-Service lädt aktuelles Datum der STT-Adresse.  
+2. Fügt neuen Prozess-Hash hinzu (SHA-256 über SAP-JSON).  
+3. Baut Sign-&-Update-Tx → Blockfrost.  
+4. STT-Policy erlaubt Datum-Update nur, wenn:  
+   * genau **1 NFT** bleibt an der Adresse  
+   * Operator-Signatur passt  
+   * Schritt-Sequenz korrekt (enum → Aiken-Match).
 
-* 3 Hydra-Knoten (SmartBFT) → zuverlässiges L2-Cluster.  
-* Energiebilanz: PoS + off-chain-Batches ⇒ < 0.01 kWh pro 1 000 Tx.  
-* Zukunftssicher: Midnight-Sidechain (ZK-Privacy) kann später andocken.
+### 4 · Datenschutz
+* Vollständiges SAP-JSON liegt verschlüsselt (AES-256) in `db/patients`.  
+* On-Chain nur Hash (`metaHash`) → DSGVO-konform.
 
 ---
 
@@ -96,74 +106,66 @@ MaterialIn → DeepDraw → ThreadCut → SandBlast → LaserMark → VisualQC �
 | Tool | Version ≥ | Installation |
 |------|-----------|--------------|
 | Git | 2.40 | `brew install git` |
+| Aiken CLI | 1.0-beta | `curl -sSfL https://install.aiken-lang.org | bash` |
+| Node.js | 20 | `brew install node` |
+| pnpm | 8 | `npm i -g pnpm` |
 | Docker Desktop | 25.x | <https://www.docker.com/products/docker-desktop> |
-| Visual Studio Code | 1.88 | <https://code.visualstudio.com/> |
-| VS-Code-Extensions | Dev Containers, Haskell, Prettier | Marketplace |
-
-> Cardano-CLI, Hydra-Node, GHC, pnpm etc. werden vom **Dev-Container** bereitgestellt.
+| VS Code + Dev Containers | – | Extensions: *Dev Containers*, *Aiken Syntax* |
 
 ---
 
 ## Schnellstart
 ```bash
-git clone https://github.com/MikeDiethelm/BA-2025.git
-cd MikeDiethelm
-code .                # „Reopen in Container?“ → Yes
+# Repo klonen
+git clone https://github.com/<org>/cardano-implant.git
+cd cardano-implant
 
-# Terminal 1
-task Hydra Head       # Hydra-Cluster
+# 1. On-Chain kompilieren
+aiken build && aiken blueprint > onchain/blueprint.json
 
-# Terminal 2
-pnpm -C offchain/edge-gw dev  # Edge-Gateway
-
-# Demo-Aufruf
-curl -X POST http://localhost:8080/v1/step \
-     -H 'Content-Type: application/json' \
-     -d @sap/example_step.json
+# 2. Off-Chain-Service installieren & starten
+pnpm -C offchain install
+BLOCKFROST_KEY=<dein-key> pnpm -C offchain dev
 ```
 
 ---
 
 ## Projektstruktur
 ```plaintext
-.devcontainer/    Dev-Container (Dockerfile + json)
-.vscode/          Tasks & Debug-Configs
-plutus/           On-Chain-Code (Haskell)
-hydra/            Hydra-Konfig + Start-Script
-offchain/edge-gw/ API-Gateway (TypeScript)
-db/               AES-verschlüsselte Patientendaten
-sap/              RFC-Stub
-cicd/             GitLab-CI-Pipeline
+onchain/            Aiken-Policies + blueprint.json
+offchain/           MeshJS (Tx-Builder + REST-API)
+db/                 AES-verschlüsselte Patientendaten
+sap/                RFC-Stub (ABAP)
+docs/               Mermaid-Diagramme etc.
 ```
 
 ---
 
 ## Build- & Run-Workflows
 
-| Aktion | Befehl (Container) | Ergebnis |
-|--------|--------------------|----------|
-| Build Haskell + TS | `⇧⌘B` / `Ctrl⇧B` | kompiliert alles |
-| Hydra starten | Task **Hydra Head** | L2-Cluster auf :4001 |
-| Gateway Debug | Run ▶ **Debug Edge-GW** | Breakpoints, Hot-Reload |
-| Unit-Tests | `cabal test all` | Plutus-Tests |
-| Plutus-Export | `plutus-compile …` | `implant.plutus` |
+| Aufgabe | Befehl |
+|---------|--------|
+| Aiken Compile | `aiken build` |
+| Blueprint exportieren | `aiken blueprint > onchain/blueprint.json` |
+| Off-Chain build | `pnpm -C offchain build` |
+| Off-Chain dev | `pnpm -C offchain dev` |
 
 ---
 
 ## Tests & CI
-* **Unit-Tests:** `plutus/test/ValidatorSpec.hs`  
-* **CI/CD:** `cicd/.gitlab-ci.yml` → Container-Build, Tests, Artefakte.
+* **On-Chain-Tests:** `aiken test`  
+* **Off-Chain-Unit-Tests:** Jest / PyTest (nach Wahl)  
+* **CI/CD:** GitHub Actions → Aiken-Build + Off-Chain-Tests + Preview-Deploy
 
 ---
 
 ## Eigene Schlüssel / IDs
 
-| Platzhalter | Datei | Bedeutung |
-|-------------|-------|-----------|
-| Script-Tx-IDs | `hydra/configs/hydra-mainnet.yaml` | Hydra-Scripts im Mainnet |
-| Wallet-Addr. + UTxO | JSON-Payload | echte Cardano-Konten |
-| `.vkey / .skey` | `hydra/keys/` | Operator-Schlüssel |
-| `PATIENT_KEY` | ENV-Variable | AES-Key DB-Verschlüsselung |
+| Was | Wo | Hinweis |
+|-----|----|---------|
+| Blockfrost-API-Key | ENV `BLOCKFROST_KEY` | kostenlos auf blockfrost.io |
+| Operator-Skeys | `offchain/keys/` | `cardano-cli address key-gen` |
+| AES-Key | ENV `PATIENT_KEY` | 32-Byte Hex |
 
 ---
 
@@ -171,10 +173,11 @@ cicd/             GitLab-CI-Pipeline
 
 | Problem | Lösung |
 |---------|--------|
-| Docker-Build langsam | erster Build cached Layers |
-| `cardano-cli` fehlt | Terminal im Dev-Container öffnen |
-| Hydra „waiting…“ | alle Party-Keys / Init prüfen |
-| M-Chip `exec format` | Dockerfile → `--platform=linux/amd64` |
+| *Token minten schlägt fehl* | Preview-Faucet ADA holen & UTxO richtig setzen |
+| *Script Redeemer mismatch* | Blueprint neu generieren + Policy ID prüfen |
+| *Blockfrost 403* | Projekt-ID → Preview, nicht Mainnet |
 
 ---
 
+## Lizenz
+MIT – frei nutz- & anpassbar.  
