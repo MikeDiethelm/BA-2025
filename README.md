@@ -33,10 +33,10 @@ Alle Off-Chain-Transaktionen werden über **MeshJS** (TypeScript) bzw. **PyCarda
 ## Architekturdiagramm
 ```mermaid
 flowchart TD
-    A[SAP / MES] -->|RFC JSON| B[Off-Chain Service<br/>(MeshJS / PyCardano)]
+    A[SAP / MES] -->|RFC JSON| B[Off-Chain Service MeshJS / PyCardano]
     B -->|REST| C[Blockfrost API]
     C -->|Tx Submit| D[Cardano Preview Testnet]
-    D -->|State Thread Token| E[Implant-NFT + Datum]
+    D -->|State Thread Token| E[Implant NFT + Datum]
 
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style B fill:#bbf,stroke:#333,stroke-width:2px
