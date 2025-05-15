@@ -1,0 +1,53 @@
+# Build & Distribution
+build/
+dist/
+docs/
+
+# macOS System Files
+.DS_Store
+
+# Node.js / pnpm
+offchain/node_modules/
+offchain/dist/
+offchain/.env
+offchain/.env.local
+
+# Python (PyCardano)
+__pycache__/
+*.py[cod]
+env/
+venv/
+.env
+
+# Aiken Build Artifacts
+onchain/plutus.json
+onchain/blueprint.json
+onchain/.aiken/
+
+# Sensitive Keys & Data
+offchain/keys/
+db/patients/
+db/*.enc
+
+# API Keys and Secrets (if accidentally stored)
+PATIENT_KEY
+BLOCKFROST_KEY
+
+# VS Code & Dev Containers
+.vscode/
+.devcontainer/
+
+# Logs & Temp Files
+*.log
+logs/
+tmp/
+.cache/
+
+# Test Coverage
+coverage/
+htmlcov/
+
+# OS Generated Files
+Thumbs.db
+ehthumbs.db
+Icon?
