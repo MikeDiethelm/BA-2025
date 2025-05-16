@@ -21,9 +21,9 @@ Blockchain-gestützte Produktions- & Audit-Plattform für Implantate
 ## Projektüberblick
 **Cardano-Implant** modelliert jedes hergestellte Implantat als **Cardano Native Token (CNT)** – abgesichert durch ein **Aiken-Policy-Script** im State-Thread-Token-Pattern (STT).  
 
-Optional liegt zum Vergleich ein **Giftcard-Beispiel** bei: eine NFT-Geschenkkarte mit klassischer Mint/Redeem-Logik (siehe `onchain/validators/giftcard.ak`).  
+Zusätzlich wird ein Giftcard-Modul bereitgestellt: eine NFT-basierte Geschenkkarten-Logik mit klassischer Mint/Redeem/Burn-Funktionalität (siehe onchain/validators/giftcard.ak).
 
-So entsteht für Implantate ein manipulationssicherer, lebenszyklusfähiger Digital-Twin:
+So entsteht ein manipulationssicherer, lebenszyklusfähiger Digital-Twin für Implantate sowie ein vollständig integriertes Geschenkkarten-System:
 
 - **Mint**: Token entsteht beim ersten Fertigungsschritt.  
 - **Update**: Datum der STT-Script-Adresse wird in jeder Supply-Chain-Stufe erweitert.  
@@ -54,12 +54,12 @@ flowchart TD
 
 ### 1 · On-Chain (Smart Policies)
 | Use-Case          | Tool     | Pfad / Datei                             |
-|-------------------|----------|-------------------------------------------|
-| Implant‑STT-Policy| **Aiken**| `onchain/validators/implant_stt.ak`       |
-| Giftcard‑Example  | **Aiken**| `onchain/validators/giftcard.ak`         |
+|-------------------|----------|------------------------------------------|
+| Implant‑STT-Policy| **Aiken**| `onchain/validators/implant_stt.ak`      |
+| Giftcard-Module   | **Aiken**| `onchain/validators/giftcard.ak`         |
 
 - **Implant-STT-Policy**: sichert sequenzielle Updates per Operator-Signatur.  
-- **Giftcard-Policy**: klassischer NFT-Mint & Redeem (siehe Beispiel).  
+- **Giftcard-Policy**: NFT-Geschenkkarten-Logik mit klassischem Mint, Redeem und Burn.
 
 **Kompilieren + Blueprint**  
 ```bash
