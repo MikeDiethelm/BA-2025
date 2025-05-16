@@ -185,7 +185,6 @@ pnpm dev
 ```text
 onchain/            Aiken-Policies + blueprint.json
 offchain/ts/        TypeScript-Service (MeshJS + Express)
-offchain/py/        Python-Service (PyCardano)
 scripts/            Hex, .plutus, .addr
 sap/                RFC-Stub (ABAP)
 db/                 AES-verschlüsselte Patientendaten
