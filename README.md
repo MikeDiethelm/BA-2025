@@ -25,9 +25,15 @@ Zusätzlich wird ein Giftcard-Modul bereitgestellt: eine NFT-basierte Geschenkka
 
 So entsteht ein manipulationssicherer, lebenszyklusfähiger Digital-Twin für Implantate sowie ein vollständig integriertes Geschenkkarten-System:
 
-- **Mint**: Token entsteht beim ersten Fertigungsschritt.  
-- **Update**: Datum der STT-Script-Adresse wird in jeder Supply-Chain-Stufe erweitert.  
-- **Burn / Transfer**: Abschluss oder Ownership-Wechsel (z. B. an Klinik).
+- **Implantate:**  
+  - **Mint:** Token entsteht beim ersten Fertigungsschritt.  
+  - **Update:** Datum der STT-Script-Adresse wird in jeder Supply-Chain-Stufe erweitert.  
+  - **Burn / Transfer:** Abschluss oder Ownership-Wechsel (z. B. an Klinik).
+
+- **Giftcards:**  
+  - **Mint:** Geschenkkarte wird ausgegeben.  
+  - **Redeem:** Karte wird eingelöst.  
+  - **Burn:** Karte wird ungültig gemacht.
 
 Alle Off‑Chain-Transaktionen werden über **MeshJS** (TypeScript) bzw. **PyCardano** erzeugt und via **Blockfrost** auf dem **Cardano Preview-Testnetz** eingereicht.
 
