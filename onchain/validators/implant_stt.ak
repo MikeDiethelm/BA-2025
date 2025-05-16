@@ -2,55 +2,51 @@ use aiken/collection/list
 use aiken/crypto.{VerificationKeyHash}
 use cardano/address.{Credential}
 use cardano/assets.{AssetName, PolicyId, quantity_of}
-use cardano/script_context.{ScriptContext, Spending}
 use cardano/transaction.{Datum, OutputReference, Transaction}
 
-type Step {
+pub type Step {
   Mint
   Process(Int)
-  Burn
 }
 
-type ImplDatum {
+pub type ImplDatum {
   step: Step,
   operator_pkh: Credential,
   meta_hashes: List<ByteArray>,
 }
 
-type ImplRedeemer {
+pub type ImplRedeemer {
   MintR
   Update(ByteArray)
   BurnR
 }
 
-type Params {
+pub type Params {
   policy_id: PolicyId,
   asset: AssetName,
 }
 
-fn is_impl_nft(v, p: Params) -> Bool {
+fn is_nft(v, p: Params) -> Bool {
   quantity_of(v, p.policy_id, p.asset) == 1
 }
 
-fn signer_matches(c: Credential, sigs: List<VerificationKeyHash>) -> Bool {
+fn signed_by(c: Credential, sigs: List<VerificationKeyHash>) -> Bool {
   when c is {
     Credential.VerificationKey(vkh) -> list.has(sigs, vkh)
     _ -> False
   }
 }
 
-validator implant(p: Params) {
-  mint(r: ImplRedeemer, policy_id: PolicyId, ctx: ScriptContext) {
-    let ScriptContext { transaction, .. } = ctx
-    when r is {
+validator implant_stt(p: Params) {
+  mint(red: ImplRedeemer, policy_id: PolicyId, tx: Transaction) {
+    when red is {
       MintR -> {
-        let minted = quantity_of(transaction.mint, policy_id, p.asset)
-        let ok_nft = minted == 1
-        let ok_out =
+        let forged = quantity_of(tx.mint, policy_id, p.asset)
+        let has_out =
           list.any(
-            transaction.outputs,
+            tx.outputs,
             fn(o) {
-              is_impl_nft(o.value, p) && when o.datum is {
+              is_nft(o.value, p) && when o.datum is {
                 Datum.InlineDatum(raw) -> {
                   expect d: ImplDatum = raw
                   d.step == Mint
@@ -59,52 +55,52 @@ validator implant(p: Params) {
               }
             },
           )
-        ok_nft && ok_out
+        forged == 1 && has_out
       }
       _ -> False
     }
   }
 
-  spend(d_opt: Option<ImplDatum>, r: ImplRedeemer, ctx: ScriptContext) {
+  spend(
+    d_opt: Option<ImplDatum>,
+    red: ImplRedeemer,
+    ref: OutputReference,
+    tx: Transaction,
+  ) {
     expect Some(d) = d_opt
-    let ScriptContext { transaction, info, .. } = ctx
-    expect Spending { output: own, datum: _ } = info
+    let Transaction { inputs, outputs, mint, extra_signatories, .. } = tx
+    expect Some(inp) = list.find(inputs, fn(i) { i.output_reference == ref })
+    let in_has = is_nft(inp.output.value, p)
+    let out_has = list.any(outputs, fn(o) { is_nft(o.value, p) })
 
-    expect Some(inp) = transaction.find_input(transaction.inputs, own)
-    let nft_in = is_impl_nft(inp.output.value, p)
-    let nft_out =
-      list.any(transaction.outputs, fn(o) { is_impl_nft(o.value, p) })
-
-    nft_in && when r is {
+    when red is {
       Update(h) -> {
-        let outs =
-          transaction.find_script_outputs(transaction.outputs, transaction.id)
-        expect Some(o) = list.head(outs)
-        expect Datum.InlineDatum(raw) = o.datum
-        expect nd: ImplDatum = raw
-        let op_ok =
-          signer_matches(d.operator_pkh, transaction.extra_signatories)
-
-        when d.step is {
-          Mint -> {
-            let new_hashes = d.meta_hashes ++
-            [h]
-            nft_out && nd.step == Process(0) && nd.meta_hashes == new_hashes && op_ok
-          }
-          Process(i) -> {
-            let new_hashes = d.meta_hashes ++
-            [h]
-            nft_out && nd.step == Process(i + 1) && nd.meta_hashes == new_hashes && op_ok
-          }
-          _ -> False
-        }
+        let forged = quantity_of(mint, p.policy_id, p.asset)
+        forged == 0 && list.any(
+          outputs,
+          fn(o) {
+            is_nft(o.value, p) && when o.datum is {
+              Datum.InlineDatum(raw2) -> {
+                expect nd: ImplDatum = raw2
+                let step_ok =
+                  when d.step is {
+                    Mint -> nd.step == Process(1)
+                    Process(i) -> nd.step == Process(i + 1)
+                  }
+                step_ok && nd.meta_hashes == list.concat(d.meta_hashes, [h]) && nd.operator_pkh == d.operator_pkh
+              }
+              _ -> False
+            }
+          },
+        ) && signed_by(d.operator_pkh, extra_signatories)
       }
-      BurnR ->
-        when d.step is {
-          Process(_) ->
-            signer_matches(d.operator_pkh, transaction.extra_signatories) && !nft_out
-          _ -> False
-        }
+      BurnR -> {
+        let forged = quantity_of(mint, p.policy_id, p.asset)
+        in_has && !out_has && forged == -1 && signed_by(
+          d.operator_pkh,
+          extra_signatories,
+        )
+      }
       _ -> False
     }
   }

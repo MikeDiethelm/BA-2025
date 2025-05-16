@@ -1,43 +1,66 @@
+# ----------------------
 # Build & Distribution
-build/
-dist/
-docs/
-
-# macOS System Files
-.DS_Store
-
-# Node.js / pnpm
-offchain/node_modules/
-offchain/dist/
-offchain/.env
-offchain/.env.local
-
-# Python (PyCardano)
-__pycache__/
-*.py[cod]
-env/
-venv/
-.env
-
-# Aiken Build Artifacts
+# ----------------------
+# Aiken
 onchain/plutus.json
 onchain/blueprint.json
+onchain/build/
+# (falls vorhanden) Aiken cache
 onchain/.aiken/
 
+# TypeScript / Node.js
+**/node_modules/
+offchain/ts/dist/
+offchain/ts/node_modules/
+
+# Python (PyCardano)
+offchain/py/venv/
+offchain/py/env/
+offchain/py/__pycache__/
+offchain/py/*.py[cod]
+
+# Docs / generated
+docs/**/*.html
+docs/**/*.pdf
+
+# ----------------------
+# Environment Files
+# ----------------------
+# dotenv
+**/.env
+**/.env.local
+
+# ----------------------
 # Sensitive Keys & Data
+# ----------------------
+# Off-Chain Schlüssel
+scripts/keys/
 offchain/keys/
+
+# Patientendaten (verschlüsselt)
 db/patients/
 db/*.enc
 
-# API Keys and Secrets (if accidentally stored)
+# API-Keys in Configs
 PATIENT_KEY
 BLOCKFROST_KEY
 
-# VS Code & Dev Containers
+# ----------------------
+# IDE & OS
+# ----------------------
+# VS Code
 .vscode/
 .devcontainer/
 
-# Logs & Temp Files
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# Logs & Temp
 *.log
 logs/
 tmp/
@@ -46,8 +69,3 @@ tmp/
 # Test Coverage
 coverage/
 htmlcov/
-
-# OS Generated Files
-Thumbs.db
-ehthumbs.db
-Icon?

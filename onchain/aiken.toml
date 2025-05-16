@@ -1,13 +1,13 @@
-name = "mikediethelm/cardano_implant"
+name = "diethmik/onchain"
 version = "0.0.0"
 compiler = "v1.1.17"
 plutus = "v3"
 license = "Apache-2.0"
-description = "Aiken contracts for project 'mikediethelm/cardano_implant'"
+description = "Aiken contracts for project 'diethmik/onchain'"
 
 [repository]
-user = "mikediethelm"
-project = "cardano_implant"
+user = "diethmik"
+project = "onchain"
 platform = "github"
 
 [[dependencies]]
