@@ -97,7 +97,7 @@ aiken blueprint > blueprint.json
 
 ### 3 · Off-Chain (Tx-Builder)
 
-- **MeshJS (TS)** oder **PyCardano (Python)** für Mint/Update/Burn-Txs  
+- **MeshJS (TS)** für Mint/Update/Burn-Txs  
 - Netzwerk-Layer: **Blockfrost** API (Preview)
 
 **Beispiel (MeshJS / TS)**
